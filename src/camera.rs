@@ -1,32 +1,41 @@
-use crate::cube::Vec3;
+use raylib::prelude::Vector3;
 
 pub struct Camera {
-    pub eye: Vec3,
-    pub center: Vec3,
-    pub up: Vec3,
-    pub forward: Vec3,
-    pub right: Vec3,
+    pub eye: Vector3,
+    pub center: Vector3,
+    pub up: Vector3,
+    pub forward: Vector3,
+    pub right: Vector3,
+    changed: bool,
 }
 
 impl Camera {
-    pub fn new(eye: Vec3, center: Vec3, up: Vec3) -> Self {
+    pub fn new(eye: Vector3, center: Vector3, up: Vector3) -> Self {
         let mut camera = Camera {
             eye,
             center,
             up,
-            forward: Vec3::new(0.0, 0.0, 0.0),
-            right: Vec3::new(0.0, 0.0, 0.0),
+            forward: Vector3::zero(),
+            right: Vector3::zero(),
+            changed: true,
         };
         camera.update_basis_vectors();
         camera
     }
 
+    fn cross_product(a: Vector3, b: Vector3) -> Vector3 {
+        Vector3::new(
+            a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x,
+        )
+    }
+
     pub fn update_basis_vectors(&mut self) {
         self.forward = (self.center - self.eye).normalized();
-        
-        self.right = self.forward.cross(self.up).normalized();
-        
-        self.up = self.right.cross(self.forward);
+        self.right = Self::cross_product(self.forward, self.up).normalized();
+        self.up = Self::cross_product(self.right, self.forward);
+        self.changed = true;
     }
 
     pub fn orbit(&mut self, yaw: f32, pitch: f32) {
@@ -41,7 +50,7 @@ impl Camera {
         let new_pitch = (current_pitch + pitch).clamp(-1.5, 1.5);
         
         let cos_pitch = new_pitch.cos();
-        let new_relative_pos = Vec3::new(
+        let new_relative_pos = Vector3::new(
             radius * cos_pitch * new_yaw.cos(),
             radius * new_pitch.sin(),
             radius * cos_pitch * new_yaw.sin(),
@@ -52,8 +61,23 @@ impl Camera {
         self.update_basis_vectors();
     }
 
-    pub fn basis_change(&self, v: &Vec3) -> Vec3 {
-        Vec3::new(
+    pub fn zoom(&mut self, delta: f32) {
+        let direction = (self.center - self.eye).normalized();
+        self.eye = self.eye + direction * delta;
+        self.changed = true;
+    }
+
+    pub fn is_changed(&mut self) -> bool {
+        if self.changed {
+            self.changed = false;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn basis_change(&self, v: &Vector3) -> Vector3 {
+        Vector3::new(
             v.x * self.right.x + v.y * self.up.x - v.z * self.forward.x,
             v.x * self.right.y + v.y * self.up.y - v.z * self.forward.y,
             v.x * self.right.z + v.y * self.up.z - v.z * self.forward.z,

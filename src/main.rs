@@ -5,58 +5,131 @@ mod framebuffer;
 mod cube;
 mod camera;
 mod light;
-mod color;
+mod textures;
+mod material;
+mod ray_intersect;
 
 use framebuffer::Framebuffer;
-use cube::{Cube, Vec3};
+use cube::{Vec3, Cube};
 use camera::Camera;
 use light::Light;
-use color::Color;
+use textures::TextureManager;
+use material::{Material, vector3_to_color};
+use ray_intersect::{Intersect, RayIntersect};
 
-fn reflect(incident: &Vec3, normal: &Vec3) -> Vec3 {
-    *incident - *normal * (2.0 * incident.dot(*normal))
+const ORIGIN_BIAS: f32 = 1e-4;
+
+fn procedural_sky(_dir: Vector3) -> Vector3 {
+    // Fondo completamente blanco
+    Vector3::new(1.0, 1.0, 1.0)
 }
 
-pub fn cast_ray(
-    ray_origin: &Vec3,
-    ray_direction: &Vec3,
-    objects: &[Cube],
-    light: &Light,
-) -> Color {
-    let mut hit_distance = f32::INFINITY;
-    let mut hit_cube: Option<&Cube> = None;
-    let mut hit_normal = Vec3::new(0.0, 0.0, 0.0);
-    let mut hit_point = Vec3::new(0.0, 0.0, 0.0);
+fn offset_origin(intersect: &Intersect, direction: &Vector3) -> Vector3 {
+    let offset = intersect.normal * ORIGIN_BIAS;
+    if direction.dot(intersect.normal) < 0.0 {
+        intersect.point - offset
+    } else {
+        intersect.point + offset
+    }
+}
 
-    for cube in objects {
-        if let Some((t, normal)) = cube.ray_intersect(ray_origin, ray_direction) {
-            if t < hit_distance && t > 0.0 {
-                hit_distance = t;
-                hit_cube = Some(cube);
-                hit_normal = normal;
-                hit_point = *ray_origin + *ray_direction * t;
-            }
+fn reflect(incident: &Vector3, normal: &Vector3) -> Vector3 {
+    *incident - *normal * 2.0 * incident.dot(*normal)
+}
+
+fn cast_shadow(
+    intersect: &Intersect,
+    light: &Light,
+    objects: &[Cube],
+) -> f32 {
+    let light_dir = (light.position.to_vector3() - intersect.point).normalized();
+    let light_distance = (light.position.to_vector3() - intersect.point).length();
+
+    let shadow_ray_origin = offset_origin(intersect, &light_dir);
+
+    for object in objects {
+        let shadow_intersect = object.ray_intersect(&shadow_ray_origin, &light_dir);
+        if shadow_intersect.is_intersecting && shadow_intersect.distance < light_distance {
+            return 1.0;
         }
     }
 
-    if hit_cube.is_none() {
-        return Color::new(0.1, 0.2, 0.5);
-    }
-
-    let light_dir = (light.position - hit_point).normalize();
-    let diffuse_intensity = hit_normal.dot(light_dir).max(0.0) * light.intensity;
-    
-    let base_color = Color::new(0.6, 0.3, 0.8);
-    let lit_color = Color::new(
-        base_color.r * light.color.r * (light.ambient_intensity + diffuse_intensity),
-        base_color.g * light.color.g * (light.ambient_intensity + diffuse_intensity),
-        base_color.b * light.color.b * (light.ambient_intensity + diffuse_intensity),
-    );
-
-    lit_color
+    0.0
 }
 
-pub fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, light: &Light) {
+pub fn cast_ray(
+    ray_origin: &Vector3,
+    ray_direction: &Vector3,
+    objects: &[Cube],
+    light: &Light,
+    texture_manager: &TextureManager,
+    depth: u32,
+) -> Vector3 {
+    if depth > 3 {
+        return procedural_sky(*ray_direction);
+    }
+
+    let mut intersect = Intersect::empty();
+    let mut zbuffer = f32::INFINITY;
+
+    for object in objects {
+        let i = object.ray_intersect(ray_origin, ray_direction);
+        if i.is_intersecting && i.distance < zbuffer {
+            zbuffer = i.distance;
+            intersect = i;
+        }
+    }
+
+    if !intersect.is_intersecting {
+        return procedural_sky(*ray_direction);
+    }
+
+    let light_dir = (light.position.to_vector3() - intersect.point).normalized();
+    let view_dir = (*ray_origin - intersect.point).normalized();
+    let reflect_dir = reflect(&-light_dir, &intersect.normal).normalized();
+
+    let shadow_intensity = cast_shadow(&intersect, light, objects);
+    let light_intensity = light.intensity * (1.0 - shadow_intensity);
+
+    let diffuse_color = if let Some(texture_path) = &intersect.material.texture_id {
+        texture_manager.get_pixel_color(texture_path, intersect.u, intersect.v)
+    } else {
+        intersect.material.diffuse
+    };
+
+    let diffuse_intensity = intersect.normal.dot(light_dir).max(0.0) * light_intensity;
+    let diffuse = diffuse_color * diffuse_intensity;
+
+    let specular_intensity = view_dir.dot(reflect_dir).max(0.0).powf(intersect.material.specular) * light_intensity;
+    let light_color_v3 = Vector3::new(
+        light.color.r as f32 / 255.0, 
+        light.color.g as f32 / 255.0, 
+        light.color.b as f32 / 255.0
+    );
+    let specular = light_color_v3 * specular_intensity;
+
+    let albedo = intersect.material.albedo;
+    let phong_color = diffuse * albedo[0] + specular * albedo[1];
+
+    let reflectivity = intersect.material.albedo[2];
+    let reflect_color = if reflectivity > 0.0 {
+        let reflect_dir = reflect(ray_direction, &intersect.normal).normalized();
+        let reflect_origin = offset_origin(&intersect, &reflect_dir);
+        cast_ray(&reflect_origin, &reflect_dir, objects, light, texture_manager, depth + 1)
+    } else {
+        Vector3::zero()
+    };
+
+    phong_color * (1.0 - reflectivity) + reflect_color * reflectivity
+}
+
+pub fn render(
+    framebuffer: &mut Framebuffer,
+    objects: &[Cube],
+    camera: &Camera,
+    light: &Light,
+    texture_manager: &TextureManager,
+) {
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
@@ -71,12 +144,14 @@ pub fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, 
             let screen_x = screen_x * aspect_ratio * perspective_scale;
             let screen_y = screen_y * perspective_scale;
 
-            let ray_direction = Vec3::new(screen_x, screen_y, -1.0).normalize();
+            let ray_direction = Vector3::new(screen_x, screen_y, -1.0).normalized();
+            
             let rotated_direction = camera.basis_change(&ray_direction);
 
-            let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light);
+            let pixel_color_v3 = cast_ray(&camera.eye, &rotated_direction, objects, light, texture_manager, 0);
+            let pixel_color = vector3_to_color(pixel_color_v3);
 
-            framebuffer.set_current_color(pixel_color.to_raylib_color());
+            framebuffer.set_current_color(pixel_color);
             framebuffer.set_pixel(x, y);
         }
     }
@@ -88,31 +163,70 @@ fn main() {
  
     let (mut window, thread) = raylib::init()
         .size(window_width, window_height)
-        .title("Cube Raytracer")
+        .title("Cube Raytracer with Textures")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
 
+    let mut texture_manager = TextureManager::new();
+
+    texture_manager.load_texture(&mut window, &thread, "assets/wood.jpg");
+    
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
-    framebuffer.set_background_color(raylib::prelude::Color::new(25, 51, 127, 255));
+
+    let brick_material = Material::new(
+        Vector3::new(0.8, 0.4, 0.2),
+        50.0,
+        [0.7, 0.3, 0.0, 0.0],
+        0.0,
+        Some("assets/wood.jpg".to_string()), // Descomenta cuando tengas texturas
+    );
+
+    let wood_material = Material::new(
+        Vector3::new(0.4, 0.2, 0.1),
+        30.0,
+        [0.8, 0.2, 0.0, 0.0],
+        0.0,
+        Some("assets/wood.jpg".to_string()), // Descomenta cuando tengas texturas
+    );
+
+    let metal_material = Material::new(
+        Vector3::new(0.5, 0.5, 0.5),
+        100.0,
+        [0.3, 0.3, 0.4, 0.0],
+        0.0,
+        None,
+    );
 
     let objects = [
-        Cube::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 1.0, 1.0)),
-        Cube::new(Vec3::new(2.5, 0.0, -2.0), Vec3::new(0.8, 0.8, 0.8)),
-        Cube::new(Vec3::new(-2.0, 1.0, -1.0), Vec3::new(0.6, 0.6, 0.6)),
+        Cube::new(
+            Vec3::new(0.0, 0.0, 0.0), 
+            Vec3::new(1.0, 1.0, 1.0),
+            brick_material.clone()
+        ),
+        Cube::new(
+            Vec3::new(2.5, 0.0, -2.0), 
+            Vec3::new(0.8, 0.8, 0.8),
+            wood_material.clone()
+        ),
+        Cube::new(
+            Vec3::new(-2.0, 1.0, -1.0), 
+            Vec3::new(0.6, 0.6, 0.6),
+            metal_material.clone()
+        ),
     ];
 
     let mut camera = Camera::new(
-        Vec3::new(0.0, 0.0, 5.0),
-        Vec3::new(0.0, 0.0, 0.0),
-        Vec3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 5.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
     );
     let rotation_speed = PI / 100.0;
+    let zoom_speed = 0.1;
 
     let light = Light::new(
         Vec3::new(5.0, 5.0, 5.0),
-        Color::new(1.0, 1.0, 1.0),
+        Color::new(255, 255, 255, 255),
         1.5,
-        0.2
     );
 
     while !window.window_should_close() {
@@ -128,9 +242,17 @@ fn main() {
         if window.is_key_down(KeyboardKey::KEY_DOWN) {
             camera.orbit(0.0, rotation_speed);
         }
+        if window.is_key_down(KeyboardKey::KEY_W) {
+            camera.zoom(zoom_speed);
+        }
+        if window.is_key_down(KeyboardKey::KEY_S) {
+            camera.zoom(-zoom_speed);
+        }
 
-        framebuffer.clear();
-        render(&mut framebuffer, &objects, &camera, &light);
+        if camera.is_changed() {
+            render(&mut framebuffer, &objects, &camera, &light, &texture_manager);
+        }
+        
         framebuffer.swap_buffers(&mut window, &thread, false);
     }
 }
