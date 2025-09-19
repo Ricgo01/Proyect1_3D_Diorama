@@ -8,7 +8,9 @@ mod light;
 mod textures;
 mod material;
 mod ray_intersect;
+mod structures;
 
+use structures::house::house_structure;
 use framebuffer::Framebuffer;
 use cube::{Vec3, Cube};
 use camera::Camera;
@@ -16,6 +18,8 @@ use light::Light;
 use textures::TextureManager;
 use material::{Material, vector3_to_color};
 use ray_intersect::{Intersect, RayIntersect};
+
+use crate::structures::house_walls;
 
 const ORIGIN_BIAS: f32 = 1e-4;
 
@@ -197,23 +201,12 @@ fn main() {
         None,
     );
 
-    let objects = [
-        Cube::new(
-            Vec3::new(0.0, 0.0, 0.0), 
-            Vec3::new(1.0, 1.0, 1.0),
-            brick_material.clone()
-        ),
-        Cube::new(
-            Vec3::new(2.5, 0.0, -2.0), 
-            Vec3::new(0.8, 0.8, 0.8),
-            wood_material.clone()
-        ),
-        Cube::new(
-            Vec3::new(-2.0, 1.0, -1.0), 
-            Vec3::new(0.6, 0.6, 0.6),
-            metal_material.clone()
-        ),
-    ];
+    let mut objects = Vec::new();
+
+
+//house base 
+    house_structure(&mut objects, wood_material.clone());
+    house_walls(&mut objects, wood_material.clone());
 
     let mut camera = Camera::new(
         Vector3::new(0.0, 0.0, 5.0),
