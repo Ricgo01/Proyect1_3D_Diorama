@@ -19,7 +19,7 @@ use textures::TextureManager;
 use material::{Material, vector3_to_color};
 use ray_intersect::{Intersect, RayIntersect};
 
-use crate::structures::{house_peak, house_roof, house_roof_peak};
+use crate::structures::{house_peak, house_roof, house_roof_peak, tree_structure};
 
 const ORIGIN_BIAS: f32 = 1e-4;
 
@@ -69,7 +69,7 @@ pub fn cast_ray(
     texture_manager: &TextureManager,
     depth: u32,
 ) -> Vector3 {
-    if depth > 3 {
+    if depth > 2 {
         return procedural_sky(*ray_direction);
     }
 
@@ -92,7 +92,7 @@ pub fn cast_ray(
     let view_dir = (*ray_origin - intersect.point).normalized();
     let reflect_dir = reflect(&-light_dir, &intersect.normal).normalized();
 
-    let shadow_intensity = cast_shadow(&intersect, light, objects);
+    let shadow_intensity = cast_shadow(&intersect, light, objects) * 0.7; // Sombras más suaves = menos cálculo
     let light_intensity = light.intensity * (1.0 - shadow_intensity);
 
     let diffuse_color = if let Some(texture_path) = &intersect.material.texture_id {
@@ -104,7 +104,7 @@ pub fn cast_ray(
     let diffuse_intensity = intersect.normal.dot(light_dir).max(0.0) * light_intensity;
     let diffuse = diffuse_color * diffuse_intensity;
 
-    let specular_intensity = view_dir.dot(reflect_dir).max(0.0).powf(intersect.material.specular) * light_intensity;
+    let specular_intensity = view_dir.dot(reflect_dir).max(0.0).powf(intersect.material.specular * 0.8) * light_intensity;
     let light_color_v3 = Vector3::new(
         light.color.r as f32 / 255.0, 
         light.color.g as f32 / 255.0, 
@@ -176,6 +176,8 @@ fn main() {
     texture_manager.load_texture(&mut window, &thread, "assets/wood.png");
     texture_manager.load_texture(&mut window, &thread, "assets/rock.png");
     texture_manager.load_texture(&mut window, &thread, "assets/log.png");
+    texture_manager.load_texture(&mut window, &thread, "assets/log2.png");
+    texture_manager.load_texture(&mut window, &thread, "assets/leaf.png");
     
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
 
@@ -203,6 +205,22 @@ fn main() {
         Some("assets/log.png".to_string()), // Descomenta cuando tengas texturas
     );
 
+    let log2_material = Material::new(
+        Vector3::new(0.4, 0.2, 0.1),
+        30.0,
+        [0.8, 0.2, 0.0, 0.0],
+        0.0,
+        Some("assets/log2.png".to_string()), // Descomenta cuando tengas texturas
+    );
+
+    let leaf_material = Material::new(
+        Vector3::new(0.4, 0.2, 0.1),
+        30.0,
+        [0.8, 0.2, 0.0, 0.0],
+        0.0,
+        Some("assets/leaf.png".to_string()), // Descomenta cuando tengas texturas
+    );
+
     let rock_material = Material::new(
         Vector3::new(0.0, 0.0, 0.0),
         10.0,
@@ -227,6 +245,10 @@ fn main() {
     house_roof(&mut objects, log_material.clone());
     house_roof_peak(&mut objects, log_material.clone());
     house_peak(&mut objects, log_material.clone());
+
+//tree
+    tree_structure(&mut objects, leaf_material.clone(), log2_material.clone());
+    
 
     let mut camera = Camera::new(
         Vector3::new(0.0, 0.0, 5.0),
