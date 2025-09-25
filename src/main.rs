@@ -19,7 +19,7 @@ use textures::TextureManager;
 use material::{Material, vector3_to_color};
 use ray_intersect::{Intersect, RayIntersect};
 
-use crate::structures::house_walls;
+use crate::structures::{house_peak, house_roof, house_roof_peak};
 
 const ORIGIN_BIAS: f32 = 1e-4;
 
@@ -173,7 +173,9 @@ fn main() {
 
     let mut texture_manager = TextureManager::new();
 
-    texture_manager.load_texture(&mut window, &thread, "assets/wood.jpg");
+    texture_manager.load_texture(&mut window, &thread, "assets/wood.png");
+    texture_manager.load_texture(&mut window, &thread, "assets/rock.png");
+    texture_manager.load_texture(&mut window, &thread, "assets/log.png");
     
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
 
@@ -182,7 +184,7 @@ fn main() {
         50.0,
         [0.7, 0.3, 0.0, 0.0],
         0.0,
-        Some("assets/wood.jpg".to_string()), // Descomenta cuando tengas texturas
+        None, // Descomenta cuando tengas texturas
     );
 
     let wood_material = Material::new(
@@ -190,7 +192,23 @@ fn main() {
         30.0,
         [0.8, 0.2, 0.0, 0.0],
         0.0,
-        Some("assets/wood.jpg".to_string()), // Descomenta cuando tengas texturas
+        Some("assets/wood.png".to_string()), // Descomenta cuando tengas texturas
+    );
+
+    let log_material = Material::new(
+        Vector3::new(0.4, 0.2, 0.1),
+        30.0,
+        [0.8, 0.2, 0.0, 0.0],
+        0.0,
+        Some("assets/log.png".to_string()), // Descomenta cuando tengas texturas
+    );
+
+    let rock_material = Material::new(
+        Vector3::new(0.0, 0.0, 0.0),
+        10.0,
+        [0.8, 0.2, 0.0, 0.0],
+        0.0,
+        Some("assets/rock.png".to_string()), // Descomenta cuando tengas texturas
     );
 
     let metal_material = Material::new(
@@ -205,8 +223,10 @@ fn main() {
 
 
 //house base 
-    house_structure(&mut objects, wood_material.clone());
-    house_walls(&mut objects, wood_material.clone());
+    house_structure(&mut objects, rock_material.clone());
+    house_roof(&mut objects, log_material.clone());
+    house_roof_peak(&mut objects, log_material.clone());
+    house_peak(&mut objects, log_material.clone());
 
     let mut camera = Camera::new(
         Vector3::new(0.0, 0.0, 5.0),

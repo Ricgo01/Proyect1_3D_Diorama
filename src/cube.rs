@@ -43,6 +43,7 @@ impl Vec3 {
 impl Add for Vec3 { type Output = Self; fn add(self, o: Self) -> Self { Self::new(self.x+o.x, self.y+o.y, self.z+o.z) } }
 impl Sub for Vec3 { type Output = Self; fn sub(self, o: Self) -> Self { Self::new(self.x-o.x, self.y-o.y, self.z-o.z) } }
 impl Mul<f32> for Vec3 { type Output = Self; fn mul(self, s: f32) -> Self { Self::new(self.x*s, self.y*s, self.z*s) } }
+impl Mul for Vec3 { type Output = Self; fn mul(self, o: Self) -> Self { Self::new(self.x*o.x, self.y*o.y, self.z*o.z) } }
 impl Div<f32> for Vec3 { type Output = Self; fn div(self, s: f32) -> Self { Self::new(self.x/s, self.y/s, self.z/s) } }
 impl Neg for Vec3 { type Output = Self; fn neg(self) -> Self { Self::new(-self.x, -self.y, -self.z) } }
 
@@ -58,32 +59,30 @@ impl Cube {
         Self { center, half, material } 
     }
 
+    #[inline]
     pub fn intersect(&self, ro: Vec3, rd: Vec3) -> Option<(f32, Vec3, f32, f32)> {
         let minb = self.center - self.half;
         let maxb = self.center + self.half;
 
-        let mut t_near = f32::NEG_INFINITY;
-        let mut t_far  = f32::INFINITY;
+        // Optimized AABB intersection using branchless approach
+        let inv_rd = Vec3::new(
+            if rd.x.abs() > 1e-8 { 1.0 / rd.x } else { f32::INFINITY },
+            if rd.y.abs() > 1e-8 { 1.0 / rd.y } else { f32::INFINITY },
+            if rd.z.abs() > 1e-8 { 1.0 / rd.z } else { f32::INFINITY },
+        );
 
-        #[inline] fn update_axis(ro: f32, rd: f32, minb: f32, maxb: f32, tn: &mut f32, tf: &mut f32) -> bool {
-            const EPS: f32 = 1e-8;
-            if rd.abs() < EPS {
-                if ro < minb || ro > maxb { return false; }
-                true
-            } else {
-                let mut t1 = (minb - ro) / rd;
-                let mut t2 = (maxb - ro) / rd;
-                if t1 > t2 { std::mem::swap(&mut t1, &mut t2); }
-                *tn = tn.max(t1);
-                *tf = tf.min(t2);
-                *tn <= *tf
-            }
+        let t1 = (minb - ro) * inv_rd;
+        let t2 = (maxb - ro) * inv_rd;
+
+        let t_min = Vec3::new(t1.x.min(t2.x), t1.y.min(t2.y), t1.z.min(t2.z));
+        let t_max = Vec3::new(t1.x.max(t2.x), t1.y.max(t2.y), t1.z.max(t2.z));
+
+        let t_near = t_min.x.max(t_min.y).max(t_min.z);
+        let t_far = t_max.x.min(t_max.y).min(t_max.z);
+
+        if t_near > t_far || t_far < 0.0 {
+            return None;
         }
-
-        if !update_axis(ro.x, rd.x, minb.x, maxb.x, &mut t_near, &mut t_far) { return None; }
-        if !update_axis(ro.y, rd.y, minb.y, maxb.y, &mut t_near, &mut t_far) { return None; }
-        if !update_axis(ro.z, rd.z, minb.z, maxb.z, &mut t_near, &mut t_far) { return None; }
-        if t_far < 0.0 { return None; }
 
         let t_hit = if t_near >= 0.0 { t_near } else { t_far };
         let p = ro + rd * t_hit;

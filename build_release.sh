@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo "🚀 Compilando RAYTRACER OPTIMIZADO para MÁXIMO FPS..."
+cargo build --release
+
+echo "✅ Compilación completada!"
+echo ""
+echo "🏃‍♂️ Para ejecutar con MÁXIMO rendimiento:"
+echo "cargo run --release"
+echo ""
+echo "🎮 Controles de Rendimiento:"
+echo "  1: Alta calidad → Movimiento SUAVE"
+echo "  2: Balance → Movimiento SUAVE"
+echo "  3: Rápido → Movimiento Equilibrado"
+echo "  4: Ultra rápido → Movimiento Equilibrado"
+echo "  5: Modo FPS → Movimiento Máxima Velocidad"
+echo "  🆕 6: Forzar Movimiento SUAVE (máxima calidad)"
+echo ""
+echo "📷 Controles de Cámara:"
+echo "  Flechas: Rotar cámara (movimiento adaptativo)"
+echo "  W/S: Zoom (movimiento adaptativo)"
+echo ""
+echo "📊 El FPS se muestra en la consola"
+echo "🎯 RECOMENDADO PARA MOVIMIENTO SUAVE: Teclas 1, 2 o 6"
+echo "🚀 RECOMENDADO PARA MÁXIMO FPS: Tecla 5"

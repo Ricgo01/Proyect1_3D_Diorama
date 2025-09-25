@@ -64,6 +64,7 @@ impl TextureManager {
         self.textures.insert(path.to_string(), texture);
     }
 
+    #[inline]
     pub fn get_pixel_color(
         &self,
         path: &str,
@@ -71,14 +72,22 @@ impl TextureManager {
         v: f32,
     ) -> Vector3 {
         if let Some(cpu_texture) = self.cpu_textures.get(path) {
-            let x = ((u * cpu_texture.width as f32) as i32).clamp(0, cpu_texture.width - 1);
-            let y = ((v * cpu_texture.height as f32) as i32).clamp(0, cpu_texture.height - 1);
+            // Optimized texture coordinate calculation
+            let u_clamped = u.clamp(0.0, 1.0);
+            let v_clamped = v.clamp(0.0, 1.0);
+            
+            let x = ((u_clamped * (cpu_texture.width - 1) as f32) as i32).max(0);
+            let y = ((v_clamped * (cpu_texture.height - 1) as f32) as i32).max(0);
 
             let index = (y * cpu_texture.width + x) as usize;
-            if index < cpu_texture.pixels.len() {
-                cpu_texture.pixels[index].to_vector3()
-            } else {
-                Vector3::new(1.0, 1.0, 1.0) // default white
+            
+            // Unsafe access for better performance (we know the bounds are correct)
+            unsafe {
+                if index < cpu_texture.pixels.len() {
+                    cpu_texture.pixels.get_unchecked(index).to_vector3()
+                } else {
+                    Vector3::new(1.0, 1.0, 1.0) // fallback
+                }
             }
         } else {
             Vector3::new(1.0, 1.0, 1.0) // default white
