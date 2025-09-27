@@ -54,19 +54,36 @@ impl Framebuffer {
         window: &mut RaylibHandle,
         raylib_thread: &RaylibThread,
         fps: bool,
+        target_width: i32,
+        target_height: i32,
     ) {
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
             let mut renderer = window.begin_drawing(raylib_thread);
-            renderer.draw_texture(&texture, 0, 0, Color::WHITE);
-        
+            
+            // Escalar la imagen al tamaño de la ventana
+            let dest_rect = Rectangle {
+                x: 0.0,
+                y: 0.0,
+                width: target_width as f32,
+                height: target_height as f32,
+            };
+            
+            let src_rect = Rectangle {
+                x: 0.0,
+                y: 0.0,
+                width: self.width as f32,
+                height: self.height as f32,
+            };
+            
+            renderer.draw_texture_pro(&texture, src_rect, dest_rect, Vector2::zero(), 0.0, Color::WHITE);
 
             if fps {
                 let num_fps = renderer.get_fps();
-                let fps_text = format!("FPS: {num_fps}");
+                let fps_text = format!("FPS: {} | Resolution: {}x{}", num_fps, self.width, self.height);
                 let font_size = 20;
                 let text_width = renderer.measure_text(&fps_text, font_size);
 
-                let x = self.width as i32 - text_width - 10;
+                let x = target_width - text_width - 10;
                 let y = 10;
                 renderer.draw_text(&fps_text, x, y, font_size, Color::WHITE);
             }
