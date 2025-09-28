@@ -7,6 +7,8 @@ pub struct Material {
     pub specular: f32,
     pub refractive_index: f32,
     pub texture_id: Option<String>,
+    pub emission: Vector3,        // Color y intensidad de emisión de luz
+    pub emission_strength: f32,   // Fuerza de la emisión
 }
 
 impl Material {
@@ -23,6 +25,28 @@ impl Material {
             specular,
             refractive_index,
             texture_id,
+            emission: Vector3::zero(),
+            emission_strength: 0.0,
+        }
+    }
+
+    pub fn new_emissive(
+        diffuse: Vector3,
+        specular: f32,
+        albedo: [f32; 4],
+        refractive_index: f32,
+        texture_id: Option<String>,
+        emission: Vector3,
+        emission_strength: f32,
+    ) -> Self {
+        Material {
+            diffuse,
+            albedo,
+            specular,
+            refractive_index,
+            texture_id,
+            emission,
+            emission_strength,
         }
     }
 
@@ -33,6 +57,8 @@ impl Material {
             specular: 0.0,
             refractive_index: 0.0,
             texture_id: None,
+            emission: Vector3::zero(),
+            emission_strength: 0.0,
         }
     }
 }

@@ -2,7 +2,7 @@ use crate::cube::{Cube, Vec3};
 use crate::material::Material;
 
 pub fn house_structure(objects: &mut Vec<Cube>, wood_material: Material) {
-    // Crear base de 2 niveles (y = -1.0 y y = 0.0)
+    
     for y in -1..=0 {
         for x in -1 ..=1 {
             for z in -1..=1 {

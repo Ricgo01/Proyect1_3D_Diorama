@@ -67,6 +67,14 @@ impl Camera {
         self.changed = true;
     }
 
+    pub fn move_vertical(&mut self, delta: f32) {
+        // Mover tanto el ojo como el centro verticalmente (eje Y)
+        let vertical_offset = Vector3::new(0.0, delta, 0.0);
+        self.eye = self.eye + vertical_offset;
+        self.center = self.center + vertical_offset;
+        self.changed = true;
+    }
+
     pub fn is_changed(&mut self) -> bool {
         if self.changed {
             self.changed = false;
