@@ -9,8 +9,8 @@ pub struct Intersect {
     pub distance: f32,
     pub is_intersecting: bool,
     pub material: Material,
-    pub u: f32,  // Coordenada de textura U
-    pub v: f32,  // Coordenada de textura V
+    pub u: f32,  
+    pub v: f32, 
 }
 
 impl Intersect {

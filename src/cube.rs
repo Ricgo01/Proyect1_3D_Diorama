@@ -28,7 +28,6 @@ impl Vec3 {
         )
     }
 
-    // Conversión desde y hacia Vector3 de raylib
     #[inline]
     pub fn from_vector3(v: Vector3) -> Self {
         Self::new(v.x, v.y, v.z)
@@ -64,7 +63,6 @@ impl Cube {
         let minb = self.center - self.half;
         let maxb = self.center + self.half;
 
-        // Optimized AABB intersection using branchless approach
         let inv_rd = Vec3::new(
             if rd.x.abs() > 1e-8 { 1.0 / rd.x } else { f32::INFINITY },
             if rd.y.abs() > 1e-8 { 1.0 / rd.y } else { f32::INFINITY },
@@ -94,28 +92,26 @@ impl Cube {
         let eps = 1e-3;
 
         let (n, u, v) = if dx <= dy && dx <= dz && dx < eps {
-            // Cara lateral (X)
             let normal = Vec3::new(local.x.signum(), 0.0, 0.0);
             
-            // Mapeo UV para caras laterales
             let u = (local.z / self.half.z + 1.0) * 0.5;
             let v = (local.y / self.half.y + 1.0) * 0.5;
             
             (normal, u.clamp(0.0, 1.0), 1.0 - v.clamp(0.0, 1.0))
         } else if dy <= dx && dy <= dz && dy < eps {
-            // Cara superior/inferior (Y)
+            
             let normal = Vec3::new(0.0, local.y.signum(), 0.0);
             
-            // Mapeo UV para cara superior/inferior
+        
             let u = (local.x / self.half.x + 1.0) * 0.5;
             let v = (local.z / self.half.z + 1.0) * 0.5;
             
             (normal, u.clamp(0.0, 1.0), v.clamp(0.0, 1.0))
         } else {
-            // Cara frontal/trasera (Z)
+           
             let normal = Vec3::new(0.0, 0.0, local.z.signum());
             
-            // Mapeo UV para cara frontal/trasera
+           
             let u = if local.z > 0.0 {
                 (local.x / self.half.x + 1.0) * 0.5
             } else {

@@ -5,13 +5,12 @@ use crate::cube::Vec3;
 pub struct CpuTexture {
     width: i32,
     height: i32,
-    pixels: Vec<Vec3>, // Normalized RGB values
+    pixels: Vec<Vec3>, 
 }
 
 impl CpuTexture {
     pub fn from_image(image: &Image) -> Self {
-        // Safe: Raylib handles pixel format internally
-        let colors = image.get_image_data(); // Vec<Color>
+        let colors = image.get_image_data(); 
         let pixels = colors
             .iter()
             .map(|c| {
@@ -33,7 +32,7 @@ impl CpuTexture {
 
 pub struct TextureManager {
     cpu_textures: HashMap<String, CpuTexture>,
-    textures: HashMap<String, Texture2D>, // Store GPU textures for rendering
+    textures: HashMap<String, Texture2D>, 
 }
 
 impl TextureManager {
@@ -72,7 +71,6 @@ impl TextureManager {
         v: f32,
     ) -> Vector3 {
         if let Some(cpu_texture) = self.cpu_textures.get(path) {
-            // Optimized texture coordinate calculation
             let u_clamped = u.clamp(0.0, 1.0);
             let v_clamped = v.clamp(0.0, 1.0);
             
@@ -81,7 +79,6 @@ impl TextureManager {
 
             let index = (y * cpu_texture.width + x) as usize;
             
-            // Unsafe access for better performance (we know the bounds are correct)
             unsafe {
                 if index < cpu_texture.pixels.len() {
                     cpu_texture.pixels.get_unchecked(index).to_vector3()
@@ -90,7 +87,7 @@ impl TextureManager {
                 }
             }
         } else {
-            Vector3::new(1.0, 1.0, 1.0) // default white
+            Vector3::new(1.0, 1.0, 1.0)
         }
     }
 

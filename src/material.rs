@@ -7,8 +7,8 @@ pub struct Material {
     pub specular: f32,
     pub refractive_index: f32,
     pub texture_id: Option<String>,
-    pub emission: Vector3,        // Color y intensidad de emisión de luz
-    pub emission_strength: f32,   // Fuerza de la emisión
+    pub emission: Vector3,       
+    pub emission_strength: f32,   
 }
 
 impl Material {

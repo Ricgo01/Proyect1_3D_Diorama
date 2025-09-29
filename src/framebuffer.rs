@@ -60,7 +60,6 @@ impl Framebuffer {
         if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
             let mut renderer = window.begin_drawing(raylib_thread);
             
-            // Escalar la imagen al tamaño de la ventana
             let dest_rect = Rectangle {
                 x: 0.0,
                 y: 0.0,
