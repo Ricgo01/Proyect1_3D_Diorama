@@ -4,7 +4,6 @@
 Este proyecto implementa un diorama 3D interactivo renderizado con **ray tracing en tiempo real** usando Rust. La cámara puede orbitar, acercarse, alejarse y desplazarse verticalmente mientras exploras un entorno inspirado en Minecraft construido con voxels.
 
 ## Galería
-Coloca tus capturas en la carpeta `docs/images/` y actualiza las rutas debajo para mostrarlas en el README.
 
 ![Vista general](assets/img2.png)
 ![Detalle de materiales](assets/img1.png)
@@ -26,7 +25,7 @@ Coloca tus capturas en la carpeta `docs/images/` y actualiza las rutas debajo pa
 | High   | 0.75                 | 2                    | ✓       | ✗          |
 | Ultra  | 1.00                 | 4                    | ✓       | ✓          |
 
-*Para cambiar de modo recomiendo dejar presionado y esperar un poco, para moverse con la camara usar calidad potato, luego para ver todos los efectos dejar apachado el 5 hasta que pase a calidad ultra (perdon si se tarda un poco :c )*
+*Para cambiar de modo recomiendo dejar presionado y esperar un poco, para moverse con la camara usar calidad potato, luego para ver todos los efectos dejar apachado el 5 hasta que pase a calidad ultra (perdon si se tarda un poco :c, si se les traba cierren el programa y vuelvanlo a abrir, que con cpu esta complicado jajaja)*
 
 ## Materiales principales
 | Material        | Textura                     | Albedo              | Specular | Reflectividad | Transparencia | Notas |
@@ -41,7 +40,6 @@ Coloca tus capturas en la carpeta `docs/images/` y actualiza las rutas debajo pa
 | Obsidiana (`obs`)| `assets/obs.png`           | `[0.3, 0.4, 0.0, 0.0]`  | 120.0    | 0.0           | 0.0           | Marco del portal |
 | Rostro (`face`) | `assets/face.png`           | `[1.35, 0.12, 0.0, 0.0]`| 8.0      | 0.0           | 0.0           | Efecto de luminosidad con albedo |
 
-> Nota: aunque portal y agua no usan textura, incluyen parámetros dedicados de transparencia, reflexión y refracción para demostrar el pipeline completo. Puedes adaptar los valores o añadir texturas translúcidas según tus necesidades.
 
 ## Características destacadas
 - Cámara orbital con zoom y desplazamiento vertical.
